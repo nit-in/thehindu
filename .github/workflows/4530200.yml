@@ -1,0 +1,77 @@
+name: The_Hindu_Bot
+
+on:
+ 
+  push:
+    tags:
+      - '4530200'
+
+ 
+  workflow_dispatch:
+
+jobs:
+ 
+  build:
+   
+    runs-on: ubuntu-latest
+
+   
+    steps:
+     
+      - uses: actions/checkout@v2
+
+      - name: setting_up
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+        run:  |
+          sudo apt update
+          sudo apt install --fix-missing -y python3 wkhtmltopdf
+          sudo pip install -r requirements.txt     
+      - name: Run a one-line script
+        run:  |
+          python the_hindu_story_back.py -l ${{ secrets.TH_STORY_URL }} -s 4530200
+          python the_hindu_story_for.py -l ${{ secrets.TH_STORY_URL }} -s 4530200
+
+      - name: zipup_stories
+        run:  |
+          cd /home/runner
+          zip -r the_hindu_stories_4530200.zip the_hindu/stories
+
+
+      - name: zipup_csvs
+        run:  |
+          cd /home/runner
+          zip -r the_hindu_csvs_4530200.zip work/thehindu/thehindu the_hindu/csvs
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TH }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload story zip
+        id: upload-release-asset-story 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TH }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: /home/runner/the_hindu_stories_4530200.zip
+          asset_name: the_hindu_stories_4530200.zip
+          asset_content_type: application/zip 
+
+      - name: Upload csv zip
+        id: upload-release-asset-csv
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TH }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: /home/runner/the_hindu_csvs_4530200.zip
+          asset_name: the_hindu_csvs_4530200.zip
+          asset_content_type: application/zip  
